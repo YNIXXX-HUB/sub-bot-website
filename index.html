@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubExchange - Free Growth</title>
+    <style>
+        body { background-color: #121212; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        h1 { color: #bb86fc; }
+        .box { background: #1e1e1e; padding: 20px; margin: 10px 0; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        input { padding: 10px; width: 70%; border-radius: 5px; border: none; }
+        button { padding: 10px 20px; border-radius: 5px; border: none; cursor: pointer; background: #03dac6; color: black; font-weight: bold; }
+        button:hover { background: #018786; }
+        .link-card { display: flex; justify-content: space-between; background: #2c2c2c; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .status { color: #cf6679; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>SubExchange 🚀</h1>
+    
+    <!-- Login Section -->
+    <div id="login-section" class="box">
+        <h3>Enter Username to Start</h3>
+        <input type="text" id="usernameInput" placeholder="Username">
+        <button onclick="login()">Login</button>
+    </div>
+
+    <!-- Dashboard Section (Hidden at start) -->
+    <div id="dashboard" class="box" style="display:none;">
+        <h2>Welcome, <span id="displayUser"></span></h2>
+        <p>Points: <span id="pointsDisplay" style="color:#03dac6; font-size:24px;">0</span></p>
+        <p id="timeoutMsg" class="status"></p>
+
+        <div class="box">
+            <h3>Promote Your Channel (-50 Points)</h3>
+            <input type="text" id="urlInput" placeholder="https://youtube.com/...">
+            <button onclick="addLink()">Promote</button>
+        </div>
+
+        <div class="box">
+            <h3>Earn Points (Click to Sub)</h3>
+            <div id="linkList">Loading links...</div>
+            <button onclick="loadLinks()">Refresh List</button>
+        </div>
+        
+        <div class="box" style="border: 1px solid #bb86fc;">
+            <h3>⚠️ REQUIRED STEP</h3>
+            <p>To earn points, you must install our Script.</p>
+            <p>1. Install Tampermonkey Extension.</p>
+            <p>2. Create new script and paste the code we provide.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // REPLACE THIS WITH YOUR RENDER URL!
+    const API_URL = "https://my-sub-bot-api.onrender.com"; 
+
+    let currentUser = "";
+
+    async function login() {
+        const user = document.getElementById('usernameInput').value;
+        if(!user) return alert("Enter a name");
+        
+        const res = await fetch(`${API_URL}/login`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: user})
+        });
+        
+        currentUser = user;
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('displayUser').innerText = user;
+        updateStats();
+        loadLinks();
+    }
+
+    async function updateStats() {
+        const res = await fetch(`${API_URL}/get_user`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: currentUser})
+        });
+        const data = await res.json();
+        document.getElementById('pointsDisplay').innerText = data.points;
+        if(data.is_timed_out) {
+            document.getElementById('timeoutMsg').innerText = "🛑 YOU ARE IN TIMEOUT (20 MINS)";
+        } else {
+            document.getElementById('timeoutMsg').innerText = "";
+        }
+    }
+
+    async function addLink() {
+        const url = document.getElementById('urlInput').value;
+        const res = await fetch(`${API_URL}/add_link`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: currentUser, url: url})
+        });
+        const data = await res.json();
+        if(data.error) alert(data.error);
+        else { alert("Promoted!"); updateStats(); }
+    }
+
+    async function loadLinks() {
+        const res = await fetch(`${API_URL}/get_links`);
+        const links = await res.json();
+        const list = document.getElementById('linkList');
+        list.innerHTML = "";
+        links.forEach(link => {
+            list.innerHTML += `<div class="link-card">
+                <span>Channel</span>
+                <a href="${link.url}" target="_blank"><button>Visit & Sub</button></a>
+            </div>`;
+        });
+    }
+    
+    // Auto refresh stats every 5 seconds
+    setInterval(() => { if(currentUser) updateStats(); }, 5000);
+</script>
+
+</body>
+</html>
